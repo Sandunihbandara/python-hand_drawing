@@ -40,29 +40,35 @@ while True:
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(rgb_frame)
 
-    drawing = False
-
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
             mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
+            # Important landmarks
             index_tip = hand_landmarks.landmark[8]
             index_pip = hand_landmarks.landmark[6]
 
             middle_tip = hand_landmarks.landmark[12]
             middle_pip = hand_landmarks.landmark[10]
 
+            ring_tip = hand_landmarks.landmark[16]
+            ring_pip = hand_landmarks.landmark[14]
+
+            pinky_tip = hand_landmarks.landmark[20]
+            pinky_pip = hand_landmarks.landmark[18]
+
+            # Index fingertip position
             index_x = int(index_tip.x * w)
             index_y = int(index_tip.y * h)
 
             # Finger up/down detection
             index_up = index_tip.y < index_pip.y
             middle_up = middle_tip.y < middle_pip.y
+            ring_up = ring_tip.y < ring_pip.y
+            pinky_up = pinky_tip.y < pinky_pip.y
 
-            # Draw only when index is up and middle is down
+            # ---------------- DRAW MODE ----------------
             if index_up and not middle_up:
-                drawing = True
-
                 if prev_x is None or prev_y is None:
                     prev_x, prev_y = index_x, index_y
 
@@ -72,13 +78,25 @@ while True:
                 cv2.putText(frame, "DRAW MODE", (10, 40),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-            # Selection / pause mode
-            elif index_up and middle_up:
+            # ---------------- SELECTION MODE ----------------
+            elif index_up and middle_up and not ring_up and not pinky_up:
                 prev_x, prev_y = None, None
 
                 cv2.putText(frame, "SELECTION MODE", (10, 40),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
+            # ---------------- ERASER MODE ----------------
+            elif not index_up and not middle_up and not ring_up and not pinky_up:
+                prev_x, prev_y = None, None
+
+                cv2.circle(canvas, (index_x, index_y), 30, (0, 0, 0), -1)
+
+                cv2.putText(frame, "ERASER MODE", (10, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+                cv2.circle(frame, (index_x, index_y), 30, (0, 0, 255), 2)
+
+            # ---------------- OTHER ----------------
             else:
                 prev_x, prev_y = None, None
 
